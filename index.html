@@ -398,6 +398,13 @@
 
   .btn-row { display: flex; gap: 6px; }
 
+  /* New Game leads the column, so it reads as the primary action. */
+  .btn-new-game {
+    background: rgba(201,168,76,0.12);
+    font-size: 1.05rem;
+    padding: 10px;
+  }
+
   .difficulty {
     display: flex;
     gap: 6px;
@@ -463,6 +470,7 @@
 
   .engine-info {
     font-size: 0.7rem;
+    margin-top: -4px;
     color: var(--text-dim);
     text-align: center;
     min-height: 1.2em;
@@ -762,55 +770,70 @@
     <div class="coords-row" id="file-labels-bot"></div>
   </div>
 
-  <div class="panel">
-    <div class="thinking" id="thinking">
-      Thinking
-      <div class="thinking-dots"><span></span><span></span><span></span></div>
-    </div>
-    <div class="engine-info" id="engine-info"></div>
+  <div class="side-column">
+    <div class="coords-row coords-spacer" aria-hidden="true"><div class="coord-label">&nbsp;</div></div>
+    <div class="panel">
+      <button class="btn btn-new-game" id="btn-new">New Game</button>
 
-    <div>
-      <div class="section-title">Mode</div>
-      <div class="difficulty" style="margin-top:8px">
-        <button class="diff-btn active" id="mode-cpu" aria-pressed="true">vs CPU</button>
-        <button class="diff-btn" id="mode-pvp" aria-pressed="false">2 Players</button>
+      <div class="thinking" id="thinking">
+        Thinking
+        <div class="thinking-dots"><span></span><span></span><span></span></div>
       </div>
-    </div>
+      <div class="engine-info" id="engine-info"></div>
 
-    <div id="side-section">
-      <div class="section-title">Play As</div>
-      <div class="difficulty" style="margin-top:8px">
-        <button class="diff-btn active" id="side-w" aria-pressed="true">White</button>
-        <button class="diff-btn" id="side-b" aria-pressed="false">Black</button>
+      <div>
+        <div class="section-title">Mode</div>
+        <div class="difficulty" style="margin-top:8px">
+          <button class="diff-btn active" id="mode-cpu" aria-pressed="true">vs CPU</button>
+          <button class="diff-btn" id="mode-pvp" aria-pressed="false">2 Players</button>
+        </div>
       </div>
-    </div>
 
-    <div id="difficulty-section">
-      <div class="section-title">Difficulty</div>
-      <div class="difficulty" style="margin-top:8px">
-        <button class="diff-btn" data-level="easy" aria-pressed="false">Easy</button>
-        <button class="diff-btn active" data-level="med" aria-pressed="true">Med</button>
-        <button class="diff-btn" data-level="hard" aria-pressed="false">Hard</button>
+      <div id="side-section">
+        <div class="section-title">Play As</div>
+        <div class="difficulty" style="margin-top:8px">
+          <button class="diff-btn active" id="side-w" aria-pressed="true">White</button>
+          <button class="diff-btn" id="side-b" aria-pressed="false">Black</button>
+        </div>
       </div>
-    </div>
 
-    <div class="btn-row">
-      <button class="btn" id="btn-undo">Undo</button>
-      <button class="btn" id="btn-flip">Flip</button>
-    </div>
-    <div class="btn-row">
-      <button class="btn" id="btn-resign">Resign</button>
-      <button class="btn" id="btn-draw">Draw</button>
-    </div>
-    <div class="btn-row">
-      <button class="btn" id="btn-export">Export</button>
-      <button class="btn" id="btn-import">Import</button>
-    </div>
-    <button class="btn" id="btn-new">New Game</button>
+      <div id="difficulty-section">
+        <div class="section-title">Difficulty</div>
+        <div class="difficulty" style="margin-top:8px">
+          <button class="diff-btn" data-level="easy" aria-pressed="false">Easy</button>
+          <button class="diff-btn active" data-level="med" aria-pressed="true">Med</button>
+          <button class="diff-btn" data-level="hard" aria-pressed="false">Hard</button>
+        </div>
+      </div>
 
-    <div class="kbd-hint">
-      <kbd>&larr;&uarr;&darr;&rarr;</kbd> move cursor &middot; <kbd>Enter</kbd> select
-      &middot; <kbd>Esc</kbd> cancel &middot; <kbd>f</kbd> flip &middot; <kbd>u</kbd> undo
+      <div>
+        <div class="section-title">Controls</div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn" id="btn-undo">Undo</button>
+          <button class="btn" id="btn-flip">Flip</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Match</div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn" id="btn-resign">Resign</button>
+          <button class="btn" id="btn-draw">Draw</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Game File</div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn" id="btn-export">Export</button>
+          <button class="btn" id="btn-import">Import</button>
+        </div>
+      </div>
+
+      <div class="kbd-hint">
+        <kbd>&larr;&uarr;&darr;&rarr;</kbd> move cursor &middot; <kbd>Enter</kbd> select
+        &middot; <kbd>Esc</kbd> cancel &middot; <kbd>f</kbd> flip &middot; <kbd>u</kbd> undo
+      </div>
     </div>
   </div>
 </div>
@@ -1931,7 +1954,7 @@ const LEVELS = {
 };
 
 // Bump on every edit so it is obvious from the page whether a change landed.
-const VERSION = '2.5.0';
+const VERSION = '2.6.0';
 
 const $ = id => document.getElementById(id);
 
