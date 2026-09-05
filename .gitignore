@@ -1,0 +1,23 @@
+# OS and editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# OneDrive conflict copies
+*-Copy.html
+*conflicted copy*
+
+# AI tooling
+.claude/
+CLAUDE.md
+
+# Local scratch
+node_modules/
+*.log
+*.bak
+tmp/
+scratch/
