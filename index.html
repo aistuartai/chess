@@ -248,15 +248,50 @@
   .piece.dragging { opacity: 0.35; }
 
   /* Side Panel */
+  /* The left column mirrors .board-wrap's structure so its contents line up
+     with the board itself: a hidden copy of the file labels above and below,
+     and a body exactly as tall as the board. */
+  .side-column {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .coords-spacer { visibility: hidden; }
+
+  .panel.capture-column {
+    height: min(560px, 90vw);
+    width: 210px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .capture-slot { flex: 0 0 auto; }
+  .capture-slot .captured-area { min-height: 44px; }
+
+  /* The move list takes whatever height is left and scrolls inside it. */
+  .panel.capture-column .move-list {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 60px;
+  }
+
+  @media (max-width: 980px) {
+    .panel.capture-column { height: auto; width: 240px; }
+    .panel.capture-column .move-list { max-height: 200px; }
+    .coords-spacer { display: none; }
+  }
+
   .panel {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 4px;
-    padding: 20px;
+    padding: 18px;
     width: 240px;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.4);
   }
 
@@ -323,6 +358,7 @@
 
   .move-list {
     max-height: 200px;
+    overscroll-behavior: contain;
     overflow-y: auto;
     font-size: 0.85rem;
     color: var(--text-dim);
@@ -346,7 +382,7 @@
     color: var(--gold);
     font-family: var(--font-body);
     font-size: 1rem;
-    padding: 10px;
+    padding: 8px;
     cursor: pointer;
     letter-spacing: 0.08em;
     transition: background 0.2s, color 0.2s;
@@ -675,6 +711,25 @@
 
 <div class="game-container">
 
+  <div class="side-column">
+    <div class="coords-row coords-spacer" aria-hidden="true"><div class="coord-label">&nbsp;</div></div>
+    <div class="panel capture-column">
+      <div class="capture-slot">
+        <div class="section-title" id="capture-top-title">Captured</div>
+        <div class="captured-area" id="capture-top"></div>
+      </div>
+
+      <div class="section-title" id="moves-label">Moves</div>
+      <div class="move-list" id="move-list" role="log" aria-labelledby="moves-label"></div>
+
+      <div class="capture-slot">
+        <div class="section-title" id="capture-bottom-title">Captured</div>
+        <div class="captured-area" id="capture-bottom"></div>
+      </div>
+    </div>
+    <div class="coords-row coords-spacer" aria-hidden="true"><div class="coord-label">&nbsp;</div></div>
+  </div>
+
   <div class="board-wrap">
     <div class="coords-row" id="file-labels-top"></div>
     <div class="board-with-ranks">
@@ -732,20 +787,6 @@
       <div class="theme-row" id="board-themes" role="group" aria-labelledby="board-theme-label"></div>
       <div class="section-title" id="piece-theme-label" style="margin-top:14px">Pieces</div>
       <div class="theme-row" id="piece-themes" role="group" aria-labelledby="piece-theme-label"></div>
-    </div>
-
-    <div>
-      <div class="section-title" id="captured-white-title">Captured by White</div>
-      <div class="captured-area" id="captured-white"></div>
-    </div>
-    <div>
-      <div class="section-title" id="captured-black-title">Captured by Black</div>
-      <div class="captured-area" id="captured-black"></div>
-    </div>
-
-    <div>
-      <div class="section-title" id="moves-label">Moves</div>
-      <div class="move-list" id="move-list" role="log" aria-labelledby="moves-label"></div>
     </div>
 
     <div class="btn-row">
@@ -1885,7 +1926,7 @@ const LEVELS = {
 };
 
 // Bump on every edit so it is obvious from the page whether a change landed.
-const VERSION = '2.3.0';
+const VERSION = '2.4.0';
 
 const $ = id => document.getElementById(id);
 
@@ -2226,8 +2267,16 @@ function renderPanel() {
   // Captured lists are derived from the undo records, so they follow takebacks.
   const takenBy = { w: [], b: [] };
   for (const h of history) if (h.undo.captured) takenBy[Engine.other(h.undo.captured[0])].push(h.undo.captured);
-  $('captured-white').textContent = takenBy.w.map(p => PIECES[p]).join('');
-  $('captured-black').textContent = takenBy.b.map(p => PIECES[p]).join('');
+
+  // Each player's haul sits on the side of the board their own pieces are on,
+  // so it swaps over when the board is flipped.
+  const bottomColor = flipped ? 'b' : 'w';
+  const topColor = Engine.other(bottomColor);
+  const sideName = c => c === 'w' ? 'White' : 'Black';
+  $('capture-top-title').textContent = 'Captured by ' + sideName(topColor);
+  $('capture-bottom-title').textContent = 'Captured by ' + sideName(bottomColor);
+  $('capture-top').textContent = takenBy[topColor].map(p => PIECES[p]).join('');
+  $('capture-bottom').textContent = takenBy[bottomColor].map(p => PIECES[p]).join('');
 
   $('thinking').classList.toggle('active', thinking);
   $('btn-undo').disabled = history.length === 0;
@@ -2617,8 +2666,6 @@ function setMode(mode) {
   gameMode = mode;
   setToggle($('mode-cpu'), mode === 'cpu');
   setToggle($('mode-pvp'), mode === 'pvp');
-  $('captured-white-title').textContent = 'Captured by White';
-  $('captured-black-title').textContent = 'Captured by Black';
   newGame();
 }
 
