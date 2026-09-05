@@ -49,7 +49,25 @@
     text-transform: uppercase;
     color: var(--gold);
     text-shadow: 0 0 40px rgba(201,168,76,0.3);
-    margin-bottom: 24px;
+  }
+
+  .page-header {
+    width: 100%;
+    max-width: 1060px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .header-themes { display: flex; gap: 18px; }
+  .header-themes .theme-row { margin-top: 6px; }
+  .header-themes .theme-btn { flex: 0 0 46px; }
+
+  @media (max-width: 720px) {
+    .page-header { justify-content: center; text-align: center; }
+    .header-themes { flex-wrap: wrap; justify-content: center; }
   }
 
   .game-container {
@@ -295,34 +313,16 @@
     box-shadow: 0 10px 40px rgba(0,0,0,0.4);
   }
 
-  .status-box {
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 12px;
-    text-align: center;
-    background: rgba(0,0,0,0.2);
-  }
-
-  .status-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-  }
-
-  #status-text {
-    font-family: var(--font-display);
-    font-size: 1rem;
-    color: var(--gold);
-    min-height: 1.4em;
-  }
-
   .turn-indicator {
     display: flex;
     align-items: center;
-    gap: 10px;
-    justify-content: center;
+    gap: 9px;
+    justify-content: flex-start;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: rgba(0,0,0,0.2);
+    padding: 9px 11px;
+    flex: 0 0 auto;
   }
 
   #turn-dot {
@@ -335,8 +335,11 @@
   }
 
   #turn-text {
-    font-size: 0.9rem;
-    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    color: var(--gold);
+    line-height: 1.3;
+    min-height: 1.3em;
   }
 
   .section-title {
@@ -559,7 +562,7 @@
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--text-dim);
-    margin: -18px 0 22px;
+    margin-top: 4px;
   }
 
   /* ── end of game ───────────────────────────────────────────── */
@@ -703,8 +706,22 @@
 </head>
 <body>
 
-<h1>♟ Chess</h1>
-<div class="version" id="version"></div>
+<header class="page-header">
+  <div>
+    <h1>♟ Chess</h1>
+    <div class="version" id="version"></div>
+  </div>
+  <div class="header-themes">
+    <div>
+      <div class="section-title" id="board-theme-label">Board</div>
+      <div class="theme-row" id="board-themes" role="group" aria-labelledby="board-theme-label"></div>
+    </div>
+    <div>
+      <div class="section-title" id="piece-theme-label">Pieces</div>
+      <div class="theme-row" id="piece-themes" role="group" aria-labelledby="piece-theme-label"></div>
+    </div>
+  </div>
+</header>
 
 <!-- Move and result announcements for screen readers. -->
 <div class="sr-only" id="announcer" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -717,6 +734,11 @@
       <div class="capture-slot">
         <div class="section-title" id="capture-top-title">Captured</div>
         <div class="captured-area" id="capture-top"></div>
+      </div>
+
+      <div class="turn-indicator">
+        <div id="turn-dot"></div>
+        <div id="turn-text" role="status" aria-live="polite">White's turn</div>
       </div>
 
       <div class="section-title" id="moves-label">Moves</div>
@@ -741,16 +763,6 @@
   </div>
 
   <div class="panel">
-    <div class="status-box">
-      <div class="status-label" id="status-label">Status</div>
-      <div id="status-text" role="status" aria-live="polite">Your move</div>
-    </div>
-
-    <div class="turn-indicator">
-      <div id="turn-dot"></div>
-      <div id="turn-text">White's turn</div>
-    </div>
-
     <div class="thinking" id="thinking">
       Thinking
       <div class="thinking-dots"><span></span><span></span><span></span></div>
@@ -780,13 +792,6 @@
         <button class="diff-btn active" data-level="med" aria-pressed="true">Med</button>
         <button class="diff-btn" data-level="hard" aria-pressed="false">Hard</button>
       </div>
-    </div>
-
-    <div>
-      <div class="section-title" id="board-theme-label">Board</div>
-      <div class="theme-row" id="board-themes" role="group" aria-labelledby="board-theme-label"></div>
-      <div class="section-title" id="piece-theme-label" style="margin-top:14px">Pieces</div>
-      <div class="theme-row" id="piece-themes" role="group" aria-labelledby="piece-theme-label"></div>
     </div>
 
     <div class="btn-row">
@@ -1926,7 +1931,7 @@ const LEVELS = {
 };
 
 // Bump on every edit so it is obvious from the page whether a change landed.
-const VERSION = '2.4.0';
+const VERSION = '2.5.0';
 
 const $ = id => document.getElementById(id);
 
@@ -2036,6 +2041,10 @@ function newGame(fen, opts) {
   Engine.clearTT();
   if (worker) worker.postMessage({ cmd: 'clear' });
   render();
+  // A position can arrive already finished — an imported FEN of a mate, say —
+  // so settle the result before handing over to the computer.
+  const ending = Engine.gameResult(pos);
+  if (ending) { finishGame(ending); return; }
   if (!(opts && opts.noCpu)) maybeStartCpu();
 }
 
@@ -2253,16 +2262,20 @@ function announce(text) {
 }
 
 function renderPanel() {
-  const turnDot = $('turn-dot'), turnText = $('turn-text'), statusText = $('status-text');
+  const turnDot = $('turn-dot'), turnText = $('turn-text');
   turnDot.style.background = pos.turn === 'w' ? '#f0f0e0' : '#222';
   turnDot.style.boxShadow = pos.turn === 'w' ? '0 0 8px #f0f0e0' : '0 0 8px #555';
-  turnText.textContent = (pos.turn === 'w' ? 'White' : 'Black') + "'s turn";
 
-  if (result) statusText.textContent = result.text;
-  else if (thinking) statusText.textContent = 'CPU thinking…';
-  else if (Engine.inCheck(pos, pos.turn)) statusText.textContent = 'Check!';
-  else if (gameMode === 'pvp') statusText.textContent = (pos.turn === 'w' ? 'White' : 'Black') + ' to move';
-  else statusText.textContent = pos.turn === humanColor ? 'Your move' : 'CPU to move';
+  // With the status box gone, this single line carries whose turn it is plus
+  // anything that overrides it: check, the computer thinking, or the result.
+  let line;
+  if (result) line = result.text;
+  else if (thinking) line = 'CPU thinking…';
+  else {
+    line = (pos.turn === 'w' ? 'White' : 'Black') + "'s turn";
+    if (Engine.inCheck(pos, pos.turn)) line += ' — Check!';
+  }
+  turnText.textContent = line;
 
   // Captured lists are derived from the undo records, so they follow takebacks.
   const takenBy = { w: [], b: [] };
