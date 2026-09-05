@@ -126,6 +126,7 @@
 
   .square.light { background: var(--light); }
   .square.dark  { background: var(--dark); }
+  #board { border-color: var(--frame); }
 
   .square.selected { background: var(--highlight) !important; }
   .square.move-hint { background: var(--highlight-dark) !important; }
@@ -147,8 +148,7 @@
     transform: translate(-50%, -50%);
     text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
   }
-  .drag-ghost[data-color="w"] { color: #fff; filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000); }
-  .drag-ghost[data-color="b"] { color: #111; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 2px rgba(255,255,255,0.7)); }
+  .drag-ghost .piece { width: 1em; height: 1em; }
 
   /* Keyboard cursor */
   .square.cursor::before {
@@ -189,14 +189,58 @@
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
   }
 
-  .square .piece[data-color="w"] {
+  /* ── piece sets ─────────────────────────────────────────────
+     Selectors hang off any [data-pieces] ancestor, so the same rules
+     style the board, the drag ghost, the promotion chooser and the
+     little previews on the theme buttons. */
+
+  /* Classic — solid silhouettes. */
+  [data-pieces="classic"] .piece[data-color="w"] {
     color: #ffffff;
     filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000);
   }
-
-  .square .piece[data-color="b"] {
+  [data-pieces="classic"] .piece[data-color="b"] {
     color: #111111;
     filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 2px rgba(255,255,255,0.7));
+  }
+
+  /* Outline — the hollow glyph as printed in a newspaper column. */
+  [data-pieces="outline"] .piece[data-color="w"],
+  [data-pieces="outline"] .piece[data-color="b"] {
+    color: #16110a;
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.35));
+  }
+
+  /* Neo — inline SVG, no font involved. */
+  [data-pieces="neo"] .piece svg { width: 82%; height: 82%; overflow: visible; }
+  [data-pieces="neo"] .piece[data-color="w"] svg {
+    fill: #f6f0e2; stroke: #1b1206; stroke-width: 1.7;
+    stroke-linejoin: round; stroke-linecap: round;
+  }
+  [data-pieces="neo"] .piece[data-color="b"] svg {
+    fill: #241a0e; stroke: #efe6d2; stroke-width: 1.7;
+    stroke-linejoin: round; stroke-linecap: round;
+  }
+
+  /* Letters — algebraic initials on a chip. */
+  [data-pieces="letters"] .piece .chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 76%;
+    height: 76%;
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.46em;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+  [data-pieces="letters"] .piece[data-color="w"] .chip {
+    background: #f5efe1; color: #1d1508; border: 2px solid #1d1508;
+  }
+  [data-pieces="letters"] .piece[data-color="b"] .chip {
+    background: #241a0e; color: #f2e9d5; border: 2px solid #f2e9d5;
   }
 
   .piece { transition: transform 0.1s; }
@@ -335,6 +379,48 @@
   .diff-btn.active { border-color: var(--gold); color: var(--gold); }
   .diff-btn:hover { border-color: var(--text-dim); color: var(--text); }
   .diff-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .theme-row { display: flex; gap: 6px; margin-top: 8px; }
+
+  .theme-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 5px 3px 4px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-dim);
+    font-family: var(--font-body);
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .theme-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .theme-btn.active { border-color: var(--gold); color: var(--gold); }
+
+  .swatch {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .swatch i { display: block; }
+
+  /* The piece previews reuse .piece, at button size. */
+  .theme-btn .piece {
+    width: 26px;
+    height: 26px;
+    font-size: 26px;
+    text-shadow: none;
+  }
+  .theme-btn .piece:hover { transform: none; }
 
   .engine-info {
     font-size: 0.7rem;
@@ -639,6 +725,13 @@
         <button class="diff-btn active" data-level="med" aria-pressed="true">Med</button>
         <button class="diff-btn" data-level="hard" aria-pressed="false">Hard</button>
       </div>
+    </div>
+
+    <div>
+      <div class="section-title" id="board-theme-label">Board</div>
+      <div class="theme-row" id="board-themes" role="group" aria-labelledby="board-theme-label"></div>
+      <div class="section-title" id="piece-theme-label" style="margin-top:14px">Pieces</div>
+      <div class="theme-row" id="piece-themes" role="group" aria-labelledby="piece-theme-label"></div>
     </div>
 
     <div>
@@ -1727,6 +1820,64 @@ const PIECES = {
   bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟'
 };
 
+// ── themes ─────────────────────────────────────────────────────
+// Board colours are plain custom properties, so switching one is a handful
+// of style writes and never touches the game state.
+const BOARD_THEMES = {
+  walnut:     { label: 'Walnut', light: '#f0d9b5', dark: '#4a3728', frame: '#3d2e1a',
+                highlight: '#cdd26a', highlightDark: '#aaa23a', check: '#e74c3c' },
+  tournament: { label: 'Green',  light: '#eeeed2', dark: '#769656', frame: '#3f5233',
+                highlight: '#f6f669', highlightDark: '#bacb44', check: '#e05c5c' },
+  slate:      { label: 'Slate',  light: '#dee3e6', dark: '#4b7399', frame: '#2f4a63',
+                highlight: '#d7e06a', highlightDark: '#8fb0cf', check: '#e0605e' },
+  ink:        { label: 'Ink',    light: '#f2f2f2', dark: '#3a3a3a', frame: '#1e1e1e',
+                highlight: '#ffd24a', highlightDark: '#c9a227', check: '#ff5252' },
+};
+
+// A shared plinth, so the SVG pieces sit on a common base.
+const NEO_BASE = '<rect x="12" y="29.5" width="21" height="4" rx="2"/>' +
+                 '<rect x="9.5" y="34.5" width="26" height="5" rx="2.5"/>';
+const NEO_PATHS = {
+  K: '<rect x="20.8" y="4.5" width="3.4" height="11" rx="1.2"/>' +
+     '<rect x="17.5" y="7.8" width="10" height="3.4" rx="1.2"/>' +
+     '<path d="M13 30c-2.5-7 1.5-13 6.5-13 1.6 0 2.6.6 3 1.2.4-.6 1.4-1.2 3-1.2 5 0 9 6 6.5 13z"/>' + NEO_BASE,
+  Q: '<circle cx="8.5" cy="14" r="2.3"/><circle cx="15.5" cy="10.8" r="2.3"/>' +
+     '<circle cx="22.5" cy="9.6" r="2.3"/><circle cx="29.5" cy="10.8" r="2.3"/>' +
+     '<circle cx="36.5" cy="14" r="2.3"/>' +
+     '<path d="M8 16l3.5 14h22l3.5-14-6.5 5.5-4.5-10-4.5 10-4.5-10-4.5 10z"/>' + NEO_BASE,
+  R: '<path d="M11 10h5v4h4v-4h5v4h4v-4h5v10l-2.5 2.5v7h-18v-7L11 20z"/>' + NEO_BASE,
+  B: '<path d="M22.5 6.5c1.7 0 3 1.3 3 2.9 0 .9-.4 1.7-1.1 2.2 3.8 2.6 6.6 6.6 6.6 10.9 0 4.2-3.8 6.9-8.5 6.9s-8.5-2.7-8.5-6.9c0-4.3 2.8-8.3 6.6-10.9-.7-.5-1.1-1.3-1.1-2.2 0-1.6 1.3-2.9 3-2.9z"/>' + NEO_BASE,
+  N: '<path d="M13.5 30c0-8 4.2-12.5 9.3-15.8l-1.6-3.9-4 2.9-2.8-3.4 4.6-5.2 3.9-4.3c1.4 0 3.6.4 5.6 1.7 3.6 2.3 5.9 6.4 6.2 11.3.4 6 .3 12 .3 16.7z"/>' + NEO_BASE,
+  P: '<circle cx="22.5" cy="13.5" r="5.6"/>' +
+     '<path d="M16.2 30c0-4.6 3-6.1 3.8-9.3h5c.8 3.2 3.8 4.7 3.8 9.3z"/>' + NEO_BASE,
+};
+
+const PIECE_SETS = {
+  classic: { label: 'Classic' },
+  outline: { label: 'Outline' },
+  neo:     { label: 'Neo' },
+  letters: { label: 'Letters' },
+};
+
+// The inner HTML of one piece, in whichever set is active.
+function pieceMarkup(piece) {
+  const t = piece[1];
+  if (pieceSet === 'neo')
+    return `<svg viewBox="0 0 45 45" aria-hidden="true">${NEO_PATHS[t]}</svg>`;
+  if (pieceSet === 'letters')
+    return `<span class="chip">${t}</span>`;
+  return PIECES[piece];
+}
+
+function pieceElement(piece) {
+  const el = document.createElement('div');
+  el.className = 'piece';
+  el.dataset.color = piece[0];
+  if (pieceSet === 'classic' || pieceSet === 'outline') el.textContent = PIECES[piece];
+  else el.innerHTML = pieceMarkup(piece);
+  return el;
+}
+
 const LEVELS = {
   easy: { label: 'Easy', maxDepth: 2,  maxTimeMs: 400,  randomness: 70 },
   med:  { label: 'Med',  maxDepth: 6,  maxTimeMs: 1200, randomness: 0  },
@@ -1734,7 +1885,7 @@ const LEVELS = {
 };
 
 // Bump on every edit so it is obvious from the page whether a change landed.
-const VERSION = '2.2.0';
+const VERSION = '2.3.0';
 
 const $ = id => document.getElementById(id);
 
@@ -1746,6 +1897,7 @@ let flipped, gameMode, humanColor, level;
 let result;                 // null, or { type, winner, text }
 let thinking, searchId, lastInfo;
 let promotionPending;
+let boardTheme, pieceSet;
 let drag = null;            // in-flight pointer drag, see onPointerDown
 let suppressClick = false;  // set when a drag has already handled the gesture
 let endShown;               // the closing animation plays once per game
@@ -2026,13 +2178,7 @@ function renderBoard() {
     }
 
     const p = pos.b[sq];
-    if (p) {
-      const pieceEl = document.createElement('div');
-      pieceEl.className = 'piece';
-      pieceEl.dataset.color = p[0];
-      pieceEl.textContent = PIECES[p];
-      el.appendChild(pieceEl);
-    }
+    if (p) el.appendChild(pieceElement(p));
 
     el.addEventListener('pointerdown', ev => onPointerDown(ev, sq));
     el.addEventListener('click', () => {
@@ -2153,7 +2299,8 @@ function showPromotion(candidates) {
     .sort((a, b) => Engine.mPromo(b) - Engine.mPromo(a))
     .map(m => {
       const t = Engine.PROMO_CHARS[Engine.mPromo(m)];
-      return `<div class="promo-piece" data-move="${m}">${PIECES[col + t]}</div>`;
+      return `<div class="promo-piece" data-move="${m}" aria-label="Promote to ${PIECE_NAMES[t]}">` +
+             `<div class="piece" data-color="${col}">${pieceMarkup(col + t)}</div></div>`;
     }).join('');
   const el = overlay(`<div class="promo-box"><h2>Promote Pawn</h2>
     <div class="promo-choices">${choices}</div></div>`);
@@ -2378,6 +2525,88 @@ function showMessage(title, body) {
 }
 
 // ── controls ───────────────────────────────────────────────────
+// Themes are per-browser conveniences; if storage is unavailable (private
+// windows, blocked site data) the page just falls back to the defaults.
+function loadThemePrefs() {
+  let savedBoard = null, savedPieces = null;
+  try {
+    savedBoard = localStorage.getItem('chess.boardTheme');
+    savedPieces = localStorage.getItem('chess.pieceSet');
+  } catch (e) { /* ignore */ }
+  boardTheme = BOARD_THEMES[savedBoard] ? savedBoard : 'walnut';
+  pieceSet = PIECE_SETS[savedPieces] ? savedPieces : 'classic';
+}
+
+function rememberThemePrefs() {
+  try {
+    localStorage.setItem('chess.boardTheme', boardTheme);
+    localStorage.setItem('chess.pieceSet', pieceSet);
+  } catch (e) { /* ignore */ }
+}
+
+function setBoardTheme(name) {
+  if (!BOARD_THEMES[name]) return;
+  boardTheme = name;
+  const t = BOARD_THEMES[name];
+  const root = document.documentElement.style;
+  root.setProperty('--light', t.light);
+  root.setProperty('--dark', t.dark);
+  root.setProperty('--frame', t.frame);
+  root.setProperty('--highlight', t.highlight);
+  root.setProperty('--highlight-dark', t.highlightDark);
+  root.setProperty('--check', t.check);
+  rememberThemePrefs();
+  renderThemeButtons();
+}
+
+function setPieceSet(name) {
+  if (!PIECE_SETS[name]) return;
+  pieceSet = name;
+  document.body.dataset.pieces = name;
+  rememberThemePrefs();
+  render();                    // pieces are rebuilt from scratch
+  renderThemeButtons();
+}
+
+function renderThemeButtons() {
+  const boards = $('board-themes'), pieces = $('piece-themes');
+  if (!boards || !pieces) return;
+
+  boards.innerHTML = '';
+  for (const [name, t] of Object.entries(BOARD_THEMES)) {
+    const btn = document.createElement('button');
+    btn.className = 'theme-btn' + (name === boardTheme ? ' active' : '');
+    btn.dataset.board = name;
+    btn.setAttribute('aria-pressed', name === boardTheme ? 'true' : 'false');
+    btn.setAttribute('aria-label', t.label + ' board');
+    btn.innerHTML = `<span class="swatch">
+        <i style="background:${t.light}"></i><i style="background:${t.dark}"></i>
+        <i style="background:${t.dark}"></i><i style="background:${t.light}"></i>
+      </span><span>${t.label}</span>`;
+    btn.addEventListener('click', () => setBoardTheme(name));
+    boards.appendChild(btn);
+  }
+
+  pieces.innerHTML = '';
+  for (const [name, set] of Object.entries(PIECE_SETS)) {
+    const btn = document.createElement('button');
+    btn.className = 'theme-btn' + (name === pieceSet ? ' active' : '');
+    btn.dataset.pieceSet = name;
+    // Each preview declares its own set, so a button can show a style the
+    // board is not currently using.
+    btn.dataset.pieces = name;
+    btn.setAttribute('aria-pressed', name === pieceSet ? 'true' : 'false');
+    btn.setAttribute('aria-label', set.label + ' pieces');
+    const previous = pieceSet;
+    pieceSet = name;
+    btn.innerHTML = `<span class="piece" data-color="w">${pieceMarkup('wN')}</span>` +
+                    `<span>${set.label}</span>`;
+    pieceSet = previous;
+    btn.addEventListener('click', () => setPieceSet(name));
+    pieces.appendChild(btn);
+  }
+}
+
 function setToggle(btn, on) {
   if (!btn) return;
   btn.classList.toggle('active', on);
@@ -2490,8 +2719,7 @@ function onPointerMove(ev) {
     if (selected !== drag.from) selectSquare(drag.from);
     const ghost = document.createElement('div');
     ghost.className = 'drag-ghost';
-    ghost.dataset.color = drag.piece[0];
-    ghost.textContent = PIECES[drag.piece];
+    ghost.appendChild(pieceElement(drag.piece));
     document.body.appendChild(ghost);
     drag.ghost = ghost;
     const src = document.querySelector('.square.selected .piece');
@@ -2548,6 +2776,9 @@ gameMode = 'cpu';
 humanColor = 'w';
 level = 'med';
 searchId = 0;
+loadThemePrefs();
+document.body.dataset.pieces = pieceSet;
+setBoardTheme(boardTheme);
 $('version').textContent = 'v' + VERSION;
 document.title = `Chess v${VERSION}`;
 setLevel('med');

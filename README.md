@@ -18,9 +18,13 @@ Open `index.html`, or host the file anywhere static (GitHub Pages works).
 - **Modes:** play the computer as either colour, or two players at one screen.
 - **Difficulty:** Easy (0.4s a move, and it will not always pick the best one),
   Medium (1.2s), Hard (3s).
+- **Themes:** four boards (Walnut, Green, Slate, Ink) and four piece sets
+  (Classic, Outline, Neo, Letters), mixed and matched freely and switchable
+  mid-game. Your choice is remembered in the browser.
 
 Undo, flip, resign, offer a draw, and import or export the game as FEN or PGN
-from the buttons in the side panel.
+from the buttons in the side panel. Every piece set is drawn locally — Unicode
+glyphs or inline SVG, never a webfont or an image file.
 
 The version number under the title tells you which build you are looking at.
 
