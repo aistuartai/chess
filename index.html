@@ -423,6 +423,22 @@
     border-radius: 2px;
   }
   .diff-btn.active { border-color: var(--gold); color: var(--gold); }
+
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .level-grid .diff-btn { padding: 6px 0; font-variant-numeric: tabular-nums; }
+
+  .level-caption {
+    margin-top: 7px;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
   .diff-btn:hover { border-color: var(--text-dim); color: var(--text); }
   .diff-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
@@ -799,11 +815,8 @@
 
       <div id="difficulty-section">
         <div class="section-title">Difficulty</div>
-        <div class="difficulty" style="margin-top:8px">
-          <button class="diff-btn" data-level="easy" aria-pressed="false">Easy</button>
-          <button class="diff-btn active" data-level="med" aria-pressed="true">Med</button>
-          <button class="diff-btn" data-level="hard" aria-pressed="false">Hard</button>
-        </div>
+        <div class="level-grid" id="level-buttons" role="group" aria-label="Difficulty level"></div>
+        <div class="level-caption" id="level-caption"></div>
       </div>
 
       <div>
@@ -1734,6 +1747,7 @@ function ChessEngine() {
     const maxDepth = Math.min(opts.maxDepth || 64, MAX_PLY - 2);
     const maxTime = opts.maxTimeMs || 1000;
     const jitter = opts.randomness || 0;
+    const blunder = opts.blunder || 0;
 
     nodes = 0; stopped = false;
     deadline = Date.now() + maxTime;
@@ -1769,13 +1783,21 @@ function ChessEngine() {
         ordering = scored.map(s => s.move);
         // Only trust a fully searched depth for the final answer.
         if (!stopped) {
-          let chosen = iterBest;
+          let chosen = iterBest, chosenScore = iterScore;
           if (jitter) {
-            const pool = scored.filter(s => s.score >= scored[0].score - jitter);
-            chosen = pool[Math.floor(Math.random() * pool.length)].move;
+            // Root scores are exact here, because a jittered search uses a full
+            // window for every root move.
+            if (blunder && Math.random() < blunder) {
+              const slip = scored[Math.floor(Math.random() * scored.length)];
+              chosen = slip.move; chosenScore = slip.score;
+            } else {
+              const pool = scored.filter(s => s.score >= scored[0].score - jitter);
+              const pick = pool[Math.floor(Math.random() * pool.length)];
+              chosen = pick.move; chosenScore = pick.score;
+            }
           }
-          best = { move: chosen, score: iterScore, depth, nodes, pv: rootPV(pos, chosen) };
-          if (onInfo) onInfo({ depth, score: iterScore, nodes, pv: best.pv });
+          best = { move: chosen, score: chosenScore, depth, nodes, pv: rootPV(pos, chosen) };
+          if (onInfo) onInfo({ depth, score: chosenScore, nodes, pv: best.pv });
         }
       }
       if (stopped) break;
@@ -1947,14 +1969,29 @@ function pieceElement(piece) {
   return el;
 }
 
-const LEVELS = {
-  easy: { label: 'Easy', maxDepth: 2,  maxTimeMs: 400,  randomness: 70 },
-  med:  { label: 'Med',  maxDepth: 6,  maxTimeMs: 1200, randomness: 0  },
-  hard: { label: 'Hard', maxDepth: 64, maxTimeMs: 3000, randomness: 0  },
-};
+// Ten levels, weakened from the top down by three dials: how deep it looks,
+// how far below best it is willing to play (randomness, in centipawns), and how
+// often it throws a move away entirely (blunder).
+//
+// The Elo figures are ESTIMATES from the settings, not measurements against
+// rated opposition — see the README. They exist to give the numbers meaning,
+// not to claim precision.
+const LEVELS = [
+  { level: 1,  elo: 800,  maxDepth: 1,  maxTimeMs: 100,  randomness: 220, blunder: 0.22 },
+  { level: 2,  elo: 950,  maxDepth: 1,  maxTimeMs: 150,  randomness: 170, blunder: 0.14 },
+  { level: 3,  elo: 1100, maxDepth: 2,  maxTimeMs: 200,  randomness: 130, blunder: 0.08 },
+  { level: 4,  elo: 1250, maxDepth: 2,  maxTimeMs: 300,  randomness: 100, blunder: 0.04 },
+  { level: 5,  elo: 1400, maxDepth: 3,  maxTimeMs: 400,  randomness: 75,  blunder: 0.015 },
+  { level: 6,  elo: 1550, maxDepth: 4,  maxTimeMs: 600,  randomness: 50,  blunder: 0 },
+  { level: 7,  elo: 1700, maxDepth: 5,  maxTimeMs: 900,  randomness: 30,  blunder: 0 },
+  { level: 8,  elo: 1800, maxDepth: 6,  maxTimeMs: 1200, randomness: 15,  blunder: 0 },
+  { level: 9,  elo: 1950, maxDepth: 8,  maxTimeMs: 2000, randomness: 0,   blunder: 0 },
+  { level: 10, elo: 2100, maxDepth: 64, maxTimeMs: 3000, randomness: 0,   blunder: 0 },
+];
+const levelOpts = () => LEVELS[level - 1];
 
 // Bump on every edit so it is obvious from the page whether a change landed.
-const VERSION = '2.6.0';
+const VERSION = '2.7.0';
 
 const $ = id => document.getElementById(id);
 
@@ -2017,7 +2054,7 @@ function abandonWorker() {
 function requestSearch(onInfo, onDone) {
   const req = {
     id: ++searchId,
-    opts: LEVELS[level],
+    opts: levelOpts(),
     fen: Engine.toFEN(pos),
     repLo: pos.repLo.slice(),
     repHi: pos.repHi.slice(),
@@ -2712,10 +2749,29 @@ function setSide(col) {
   newGame();
 }
 
-function setLevel(name) {
-  level = name;
-  document.querySelectorAll('[data-level]').forEach(b =>
-    setToggle(b, b.dataset.level === name));
+function setLevel(n) {
+  const wanted = Math.round(Number(n));
+  if (!(wanted >= 1 && wanted <= LEVELS.length)) return;
+  level = wanted;
+  renderLevelButtons();
+}
+
+function renderLevelButtons() {
+  const host = $('level-buttons');
+  if (!host) return;
+  host.innerHTML = '';
+  for (const spec of LEVELS) {
+    const btn = document.createElement('button');
+    btn.className = 'diff-btn' + (spec.level === level ? ' active' : '');
+    btn.dataset.level = String(spec.level);
+    btn.textContent = String(spec.level);
+    btn.setAttribute('aria-pressed', spec.level === level ? 'true' : 'false');
+    btn.setAttribute('aria-label', `Level ${spec.level}, around ${spec.elo} Elo`);
+    btn.addEventListener('click', () => setLevel(spec.level));
+    host.appendChild(btn);
+  }
+  const spec = levelOpts();
+  $('level-caption').textContent = `Level ${spec.level} · ~${spec.elo} Elo`;
 }
 
 function resign() {
@@ -2844,8 +2900,6 @@ $('mode-cpu').addEventListener('click', () => setMode('cpu'));
 $('mode-pvp').addEventListener('click', () => setMode('pvp'));
 $('side-w').addEventListener('click', () => setSide('w'));
 $('side-b').addEventListener('click', () => setSide('b'));
-document.querySelectorAll('[data-level]').forEach(b =>
-  b.addEventListener('click', () => setLevel(b.dataset.level)));
 $('btn-new').addEventListener('click', () => newGame());
 $('btn-undo').addEventListener('click', undoMove);
 $('btn-flip').addEventListener('click', flipBoard);
@@ -2857,14 +2911,14 @@ $('btn-import').addEventListener('click', showImport);
 // ── boot ───────────────────────────────────────────────────────
 gameMode = 'cpu';
 humanColor = 'w';
-level = 'med';
+level = 5;
 searchId = 0;
 loadThemePrefs();
 document.body.dataset.pieces = pieceSet;
 setBoardTheme(boardTheme);
 $('version').textContent = 'v' + VERSION;
 document.title = `Chess v${VERSION}`;
-setLevel('med');
+setLevel(5);
 newGame();
 </script>
 </body>

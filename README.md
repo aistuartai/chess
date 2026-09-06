@@ -16,8 +16,9 @@ Open `index.html`, or host the file anywhere static (GitHub Pages works).
 - **Keyboard:** arrow keys move the cursor, <kbd>Enter</kbd> selects and moves,
   <kbd>Esc</kbd> cancels, <kbd>f</kbd> flips the board, <kbd>u</kbd> takes a move back.
 - **Modes:** play the computer as either colour, or two players at one screen.
-- **Difficulty:** Easy (0.4s a move, and it will not always pick the best one),
-  Medium (1.2s), Hard (3s).
+- **Difficulty:** ten levels. Level 1 plays like a beginner — shallow, and it
+  drops a piece often enough to be beatable; level 10 searches three seconds a
+  move and does not miss much.
 - **Themes:** four boards (Walnut, Green, Slate, Ink) and four piece sets
   (Classic, Outline, Neo, Letters), mixed and matched freely and switchable
   mid-game. Your choice is remembered in the browser.
@@ -27,6 +28,31 @@ from the buttons in the side panel. Every piece set is drawn locally — Unicode
 glyphs or inline SVG, never a webfont or an image file.
 
 The version number under the title tells you which build you are looking at.
+
+### Levels
+
+Three dials weaken the engine from the top down: how deep it looks, how far
+below best it will settle (randomness), and how often it throws a move away
+(blunder).
+
+| Level | Depth | Time | Randomness | Blunder | ~Elo |
+|---|---|---|---|---|---|
+| 1 | 1 | 0.1s | 220cp | 22% | 800 |
+| 2 | 1 | 0.15s | 170cp | 14% | 950 |
+| 3 | 2 | 0.2s | 130cp | 8% | 1100 |
+| 4 | 2 | 0.3s | 100cp | 4% | 1250 |
+| 5 | 3 | 0.4s | 75cp | 1.5% | 1400 |
+| 6 | 4 | 0.6s | 50cp | — | 1550 |
+| 7 | 5 | 0.9s | 30cp | — | 1700 |
+| 8 | 6 | 1.2s | 15cp | — | 1800 |
+| 9 | 8 | 2s | — | — | 1950 |
+| 10 | unlimited | 3s | — | — | 2100 |
+
+**The Elo column is an estimate**, derived from the settings rather than
+measured against rated opposition, and the levels have only been checked
+against each other. Read them as a ladder, not as a rating. There is no opening
+book, so the top levels are deterministic — the same position always gets the
+same move.
 
 ## Rules
 
